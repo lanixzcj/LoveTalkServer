@@ -3,10 +3,14 @@
  */
 var mutil = require('cloud/mutil');
 var mlog = require('cloud/mlog');
-var Avatar=AV.Object.extend('Avatar');
+var _ = require('underscore');
+var Avatar = AV.Object.extend('Avatar');
 
-function findUserById(userId) {
+function findUserById(userId, queryFn) {
   var q = new AV.Query('_User');
+  if (queryFn) {
+    queryFn(q);
+  }
   return q.get(userId);
 }
 
@@ -20,109 +24,58 @@ function findUserByName(name) {
   });
 }
 
-function findAllUsers(modifyQueryFn){
-  return mutil.findAll('_User',modifyQueryFn);
-}
-
-function findFriends(name) {
+function findUsernameById(id) {
   var p = new AV.Promise();
-  findUserByName(name).then(function (user) {
-    user.relation('friends').query().find().then(function (results) {
-      p.resolve(results);
-    }, mutil.rejectFn(p));
-  }, mutil.rejectFn(p));
+  findUserById(id).then(function (user) {
+    p.resolve(user.get('username'));
+  }, function (error) {
+    console.log(error.message);
+    p.resolve();
+  });
   return p;
 }
 
-function addFriend(user, friend) {
-  var friends = user.relation('friends');
-  friends.add(friend);
-  return user.save();
+function findUsers(userIds) {
+  var q = new AV.Query('_User');
+  q.containedIn('objectId', userIds);
+  q.include('setting');
+  return q.find();
 }
 
-function removeFriend(user, friend) {
-  var friends = user.relation('friends');
-  friends.remove(friend);
-  return user.save();
+function findAllUsers(modifyQueryFn) {
+  return mutil.findAll('_User', modifyQueryFn);
 }
 
-function findBothUser(fromUserId, toUserId) {
-  var p = new AV.Promise();
-  findUserById(fromUserId).then(function (fromUser) {
-    mlog.log('fromUser found');
-    findUserById(toUserId).then(function (toUser) {
-      mlog.log('find user and resolve');
-      p.resolve(fromUser, toUser);
-    }, mutil.rejectFn(p));
-  }, mutil.rejectFn(p));
-  return p;
+function unfollow(user, targetUser) {
+  return user.unfollow(targetUser.id);
 }
 
-function doRelationForBoth(fromUserId, toUserId, relationFn) {
-  var p = new AV.Promise();
-  mlog.log('doRelationForBoth');
-  findBothUser(fromUserId, toUserId).then(function (fromUser, toUser) {
-    mlog.log('find users');
-    relationFn(fromUser, toUser).then(function () {
-      mlog.log('relationFn once');
-      relationFn(toUser, fromUser).then(function () {
-        p.resolve();
-      }, mutil.rejectFn(p))
-    }, mutil.rejectFn(p));
-  }, mutil.rejectFn(p));
-  return p;
-}
-
-function addFriendForBoth(fromUserId, toUserId) {
-  return doRelationForBoth(fromUserId, toUserId, addFriend);
-}
-
-function removeFriendForBoth(fromUserId, toUserId) {
-  return doRelationForBoth(fromUserId, toUserId, removeFriend);
-}
-
-function countAvatars(){
-  var q=new AV.Query(Avatar);
-  return q.count();
-}
-
-function findRandomAvatar(){
-  var p=new AV.Promise();
-  countAvatars().then(function(count){
-    var i=Math.floor(Math.random()*count);
-    var q=new AV.Query(Avatar);
-    q.skip(i);
-    q.limit(1);
-    q.ascending('createdAt');
-    q.first().then(function(avatar){
-      p.resolve(avatar);
-    },mutil.rejectFn(p));
-  },mutil.rejectFn(p));
-  return p;
-}
-
-function beforeSaveUser(req,res){
-  var user=req.object;
-  if(user.get('avatar')==null){
-    findRandomAvatar().then(function(avatar){
-      var url=avatar.get('file').url();
-      mlog.log('getFile '+url);
-      user.set('avatar',avatar.get('file'));
-      res.success();
-    },mutil.cloudErrorFn(res));
+function afterDeleteFollowee(req) {
+  var user = req.object.get('user');
+  var followee = req.object.get('followee');
+  if(user.id == req.user.id){
+    /*这里加个判断，否则会执行两次。因为第一个unfollow时，调用了此函数，此函数又调用了unfollow
+ ，第二次引发afterDelete*/
+    unfollow(followee, user).then(function () {
+      console.log('unfollow succeed followee='+followee.id+' user='+user.id);
+    }, mlog.cloudErrorFn);
   }else{
-    res.success();
+    // skip
   }
+}
+
+function unfollowTest(req, res) {
+  unfollow(AV.Object.createWithoutData('_User', "5416d9b2e4b0f645f29ddbfd"),
+    AV.Object.createWithoutData('_User', "54bc8c2de4b0644caaed25e3")).then(function () {
+      res.success('ok');
+    }, mlog.cloudErrorFn)
 }
 
 exports.findUser = findUser;
 exports.findUserById = findUserById;
-exports.addFriend = addFriend;
-exports.removeFriend = removeFriend;
-exports.addFriendForBoth = addFriendForBoth;
-exports.removeFriendForBoth = removeFriendForBoth;
-exports.findFriends = findFriends;
-exports.findAllUsers=findAllUsers;
-exports.beforeSaveUser=beforeSaveUser;
-exports.findRandomAvatar=findRandomAvatar;
-
+exports.findAllUsers = findAllUsers;
+exports.findUsernameById = findUsernameById;
+exports.findUsers = findUsers;
+exports.afterDeleteFollowee=afterDeleteFollowee;
+exports.unfollow=unfollow;
+exports.unfollowTest=unfollowTest;

@@ -1,25 +1,33 @@
-[LeanCloud 镜像下载地址](https://download.leancloud.cn/demo/)
+# LeanChat 服务端
+
+## 简介
+
+LeanChat 是 [LeanCloud](http://leancloud.cn) [实时通信](https://leancloud.cn/docs/realtime.html) 组件的 Demo，通过该应用你可以学习和了解 LeanCloud 实时通信功能。
+
+应用体验下载地址：[http://fir.im/leanchat](http://fir.im/leanchat)
 
 ## Leanchat 项目构成
 
-* [Leanchat-android](https://github.com/leancloud/leanchat)
-* [Leanchat-ios](https://github.com/leancloud/leanchat-ios)
-* [Leanchat-cloud-code](https://github.com/leancloud/leanchat-cloudcode)，Leanchat 云代码后端
+* [Leanchat-android](https://github.com/leancloud/leanchat-android)：Android 客户端
+* [Leanchat-ios](https://github.com/leancloud/leanchat-ios)：iOS 客户端
+* [Leanchat-cloud-code](https://github.com/leancloud/leanchat-cloudcode)：可选服务端，使用 LeanCloud [云代码](https://leancloud.cn/docs/cloud_code_guide.html) 实现，实现了聊天的签名，更安全。
 
-Cloud code project for ChatDemo. Cloud Code Guide: https://leancloud.cn/docs/cloud_code_guide.html
 
-## 云代码部署
+## 部署服务端
 
-1. fork 本项目
-2. 改掉 global.json，改为你应用的AppID和AppKey
-3. 安装[云代码命令工具](https://leancloud.cn/docs/cloud_code_commandline.html)进行部署或者管理台云代码一栏，填写项目地址，点击部署
+1. fork
+2. 管理台在云代码相关位置填写地址
+3. 管理台点击部署
 
-服务端接口：
+## 文档
 
-* `addFriend` ，双向添加好友，需要参数`fromUserId`,`toUserId`
-* `removeFriend`，双向移除好友，参数同上
-* `tryCreateAddRequest`，尝试发出添加好友的请求，若已存在等待验证的请求，返回Error("已经发过请求了")，否则创建一条`AddRequest`记录
-* `sign`，对单聊的watch进行签名
-* `group_sign`，对群组操作进行签名
+* git 仓库部署：[相关文档](https://leancloud.cn/docs/cloud_code_guide.html#部署代码)
+* 命令行工具部署：[相关文档](https://leancloud.cn/docs/cloud_code_commandline.html#部署)
 
-或者见[main.js](https://github.com/leancloud/AdventureCloud/blob/master/cloud/main.js)
+## 开发相关
+
+### 相关接口
+
+* `conv_sign`：对聊天操作进行签名
+
+代码详见 [main.js](https://github.com/leancloud/AdventureCloud/blob/master/cloud/main.js)

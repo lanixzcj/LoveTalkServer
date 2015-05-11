@@ -22,14 +22,35 @@ function logError(error) {
   console.log(error + '');
 }
 
-function log(s) {
+function log(s,mustLog) {
   s = s + '';
-  if (open) {
+  if (open || mustLog===true) {
     filterFn(s, function () {
       console.log(s);
     });
   }
 }
 
+function dir(o){
+  if(open){
+    console.dir(o);
+  }
+}
+
+
+function printProperties(a,mustLog) {
+  for (var p in a) {
+    log(p + ' = ' + a[p],mustLog);
+  }
+}
+
+function logObject(object,mustLog){
+  var s=JSON.stringify(object);
+  log(s,mustLog);
+}
+
 exports.log = log;
 exports.logError = logError;
+exports.printProperties = printProperties;
+exports.logObject=logObject;
+exports.dir=dir;
